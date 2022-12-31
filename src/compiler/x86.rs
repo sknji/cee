@@ -85,20 +85,25 @@ impl<'c> X86<'c> {
     }
 
     pub fn unary(&mut self, u: Unary) {
-        self.compile(*u.right);
         match u.token.kind {
             TokenType::TokenMinus => {
+                self.compile(*u.right);
                 self.gen.icmd1ln("neg", "%rax");
             }
-            TokenType::TokenPlus => {}
+            TokenType::TokenPlus => {
+                self.compile(*u.right);
+            }
             TokenType::TokenAddr => {}
-            TokenType::TokenDeref => {}
+            TokenType::TokenDeref => {
+                self.compile(*u.right);
+                self.gen.icmd2ln("mov", "(%rax)", "%rax");
+            }
             _ => {}
         }
     }
 
     pub fn variable(&mut self, v: Variable) {
-        self.gen_address(v.id);
+        self.gen_address(v.id, v.token.kind);
 
         match v.assign {
             None => {
@@ -113,7 +118,7 @@ impl<'c> X86<'c> {
         }
     }
 
-    fn gen_address(&mut self, id: i8) {
+    fn gen_address(&mut self, id: i8, token_type: TokenType) {
         let (found, offset) = self.scope.offset_by_id(id);
         if !found {
             eprintln!("variable of id {} not found", offset);
